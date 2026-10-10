@@ -9,3 +9,5 @@ us_core.workspace = true
 us_content.workspace = true
 serde.workspace = true
 thiserror.workspace = true
+glam.workspace = true
+libm.workspace = true

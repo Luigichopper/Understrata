@@ -11,5 +11,8 @@ path = "src/main.rs"
 [dependencies]
 us_core.workspace = true
 us_content.workspace = true
+us_worldgen.workspace = true
+us_voxel.workspace = true
+us_mesh.workspace = true
 clap.workspace = true
 anyhow.workspace = true

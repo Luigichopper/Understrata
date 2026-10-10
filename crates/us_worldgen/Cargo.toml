@@ -7,5 +7,7 @@ license.workspace = true
 [dependencies]
 us_core.workspace = true
 us_voxel.workspace = true
+us_mesh.workspace = true
 us_content.workspace = true
 libm.workspace = true
+glam.workspace = true

@@ -1193,7 +1193,7 @@ dependencies = [
  "arrayvec",
  "bevy_reflect",
  "derive_more",
- "glam 0.32.1",
+ "glam",
  "itertools",
  "libm",
  "rand",
@@ -1223,7 +1223,7 @@ dependencies = [
  "bytemuck",
  "derive_more",
  "encase",
- "glam 0.32.1",
+ "glam",
  "half",
  "hexasphere",
  "thiserror 2.0.21",
@@ -1373,7 +1373,7 @@ dependencies = [
  "downcast-rs 2.0.2",
  "erased-serde",
  "foldhash 0.2.0",
- "glam 0.32.1",
+ "glam",
  "indexmap",
  "inventory",
  "petgraph",
@@ -1435,7 +1435,7 @@ dependencies = [
  "derive_more",
  "downcast-rs 2.0.2",
  "encase",
- "glam 0.32.1",
+ "glam",
  "image",
  "indexmap",
  "itertools",
@@ -2834,15 +2834,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "glam"
-version = "0.34.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fc148d4ddd3930c52f9e5ae79b89805c6f07e9ff417e7b083e0348cea60a5aba"
-dependencies = [
- "serde_core",
-]
-
-[[package]]
 name = "glow"
 version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3045,7 +3036,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "177ea6330876de4ef08e184f827b98acc037614a4ce409902c5b0d53a9c2e951"
 dependencies = [
  "constgebra",
- "glam 0.32.1",
+ "glam",
  "tinyvec",
 ]
 
@@ -5332,7 +5323,7 @@ dependencies = [
 name = "us_core"
 version = "0.1.0"
 dependencies = [
- "glam 0.34.1",
+ "glam",
  "libm",
  "serde",
  "thiserror 2.0.21",
@@ -5353,6 +5344,7 @@ dependencies = [
 name = "us_mesh"
 version = "0.1.0"
 dependencies = [
+ "glam",
  "us_core",
  "us_voxel",
 ]
@@ -5373,6 +5365,8 @@ dependencies = [
  "bevy",
  "us_core",
  "us_mesh",
+ "us_voxel",
+ "us_worldgen",
 ]
 
 [[package]]
@@ -5392,6 +5386,9 @@ dependencies = [
  "clap",
  "us_content",
  "us_core",
+ "us_mesh",
+ "us_voxel",
+ "us_worldgen",
 ]
 
 [[package]]
@@ -5407,6 +5404,8 @@ dependencies = [
 name = "us_voxel"
 version = "0.1.0"
 dependencies = [
+ "glam",
+ "libm",
  "serde",
  "thiserror 2.0.21",
  "us_content",
@@ -5417,9 +5416,11 @@ dependencies = [
 name = "us_worldgen"
 version = "0.1.0"
 dependencies = [
+ "glam",
  "libm",
  "us_content",
  "us_core",
+ "us_mesh",
  "us_voxel",
 ]
 

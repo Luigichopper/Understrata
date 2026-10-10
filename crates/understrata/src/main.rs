@@ -138,14 +138,19 @@ fn main() -> anyhow::Result<()> {
             )),
         );
     } else {
-        app.add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "Understrata".into(),
-                resolution: (1280u32, 720u32).into(),
-                ..default()
-            }),
-            ..default()
-        }));
+        app.add_plugins(
+            DefaultPlugins
+                .build()
+                .disable::<bevy::log::LogPlugin>()
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        title: "Understrata".into(),
+                        resolution: (1280u32, 720u32).into(),
+                        ..default()
+                    }),
+                    ..default()
+                }),
+        );
     }
 
     // Add Understrata subsystems
