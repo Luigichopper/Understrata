@@ -1,0 +1,22 @@
+[package]
+name = "understrata"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "understrata"
+path = "src/main.rs"
+
+[dependencies]
+bevy.workspace = true
+clap.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+anyhow.workspace = true
+us_core.workspace = true
+us_content.workspace = true
+us_game.workspace = true
+us_render.workspace = true
+us_ui.workspace = true
+us_audio.workspace = true

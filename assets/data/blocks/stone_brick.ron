@@ -1,0 +1,21 @@
+BlockDef(
+    id: "us:stone_brick",
+    name_key: "block.stone_brick",
+    hardness: 2.0,
+    min_tool_tier: 1,
+    opaque: true,
+    emits_light: None,
+    light_filter: 15,
+    textures: (
+        top: "stone_brick_top",
+        side: "stone_brick_side",
+        bottom: "stone_brick_bottom",
+    ),
+    shapes: ["Full", "Slab", "Stair", "Slope"],
+    sound_set: "stone",
+    drops: [
+        (item: "us:stone_brick", count: 1),
+    ],
+    tags: ["stone", "building"],
+    flammable: false,
+)

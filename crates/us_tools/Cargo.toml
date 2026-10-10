@@ -1,0 +1,15 @@
+[package]
+name = "us_tools"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "us_tools"
+path = "src/main.rs"
+
+[dependencies]
+us_core.workspace = true
+us_content.workspace = true
+clap.workspace = true
+anyhow.workspace = true

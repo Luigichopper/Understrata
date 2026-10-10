@@ -1,0 +1,55 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/us_core",
+    "crates/us_content",
+    "crates/us_voxel",
+    "crates/us_mesh",
+    "crates/us_worldgen",
+    "crates/us_sim",
+    "crates/us_net",
+    "crates/us_game",
+    "crates/us_render",
+    "crates/us_ui",
+    "crates/us_audio",
+    "crates/us_tools",
+    "crates/understrata",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+authors = ["Understrata Team"]
+
+[workspace.dependencies]
+bevy = { version = "0.19.1" }
+glam = { version = "0.34", features = ["serde"] }
+serde = { version = "1.0", features = ["derive"] }
+ron = "0.12"
+libm = "0.2"
+clap = { version = "4.5", features = ["derive"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+thiserror = "2.0"
+anyhow = "1.0"
+
+# Workspace crate paths
+us_core = { path = "crates/us_core" }
+us_content = { path = "crates/us_content" }
+us_voxel = { path = "crates/us_voxel" }
+us_mesh = { path = "crates/us_mesh" }
+us_worldgen = { path = "crates/us_worldgen" }
+us_sim = { path = "crates/us_sim" }
+us_net = { path = "crates/us_net" }
+us_game = { path = "crates/us_game" }
+us_render = { path = "crates/us_render" }
+us_ui = { path = "crates/us_ui" }
+us_audio = { path = "crates/us_audio" }
+us_tools = { path = "crates/us_tools" }
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3

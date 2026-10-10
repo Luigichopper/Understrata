@@ -1,0 +1,11 @@
+[package]
+name = "us_worldgen"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+us_core.workspace = true
+us_voxel.workspace = true
+us_content.workspace = true
+libm.workspace = true
