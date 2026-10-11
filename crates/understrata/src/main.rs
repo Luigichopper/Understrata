@@ -81,6 +81,14 @@ pub struct Opts {
     #[arg(long, default_value = "info")]
     pub log_level: String,
 
+    /// Simulated network latency in milliseconds (NET-010)
+    #[arg(long)]
+    pub net_lag_ms: Option<u32>,
+
+    /// Simulated network packet loss percentage 0..100 (NET-010)
+    #[arg(long)]
+    pub net_loss_pct: Option<f32>,
+
     /// Fail test / exit non-zero if any warning is logged
     #[arg(long)]
     pub assert_no_warnings: bool,
@@ -131,6 +139,16 @@ fn main() -> anyhow::Result<()> {
     app.insert_resource(harness);
     app.insert_resource(opts.clone());
 
+    let lag = opts.net_lag_ms.unwrap_or(0);
+    let loss = opts.net_loss_pct.unwrap_or(0.0);
+    if lag > 0 || loss > 0.0 {
+        app.insert_resource(us_game::LocalServer::new(
+            lag,
+            loss,
+            Vec3::new(0.0, 24.0, 42.0),
+        ));
+    }
+
     if opts.headless || opts.server {
         app.add_plugins(
             MinimalPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(
@@ -142,6 +160,17 @@ fn main() -> anyhow::Result<()> {
             DefaultPlugins
                 .build()
                 .disable::<bevy::log::LogPlugin>()
+                .set(ImagePlugin {
+                    default_sampler: bevy::image::ImageSamplerDescriptor {
+                        address_mode_u: bevy::image::ImageAddressMode::Repeat,
+                        address_mode_v: bevy::image::ImageAddressMode::Repeat,
+                        address_mode_w: bevy::image::ImageAddressMode::Repeat,
+                        mag_filter: bevy::image::ImageFilterMode::Nearest,
+                        min_filter: bevy::image::ImageFilterMode::Nearest,
+                        mipmap_filter: bevy::image::ImageFilterMode::Nearest,
+                        ..default()
+                    },
+                })
                 .set(WindowPlugin {
                     primary_window: Some(Window {
                         title: "Understrata".into(),

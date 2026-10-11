@@ -129,3 +129,108 @@ pub fn raycast_terrain(
 
     None
 }
+
+/// Evaluates the continuous terrain SDF across multi-chunk storage at an arbitrary world position.
+pub fn sdf_at_world(
+    chunks: &std::collections::HashMap<us_core::ChunkPos, TerrainChunk>,
+    world_pos: Vec3,
+) -> f32 {
+    let cell = CellPos::new(
+        libm::floorf(world_pos.x / CELL) as i32,
+        libm::floorf(world_pos.y / CELL) as i32,
+        libm::floorf(world_pos.z / CELL) as i32,
+    );
+    let cpos = cell.to_chunk();
+
+    if let Some(chunk) = chunks.get(&cpos) {
+        let chunk_min = cpos.min_world().0;
+        let local_p = world_pos - chunk_min;
+        sample_trilinear_sdf(chunk, local_p)
+    } else {
+        10.0 // Default to open air if chunk is unpopulated
+    }
+}
+
+/// Computes the continuous surface normal / gradient vector at an arbitrary world position.
+pub fn gradient_at_world(
+    chunks: &std::collections::HashMap<us_core::ChunkPos, TerrainChunk>,
+    world_pos: Vec3,
+) -> Vec3 {
+    let eps = 0.1 * CELL;
+    let dx = sdf_at_world(chunks, world_pos + Vec3::X * eps)
+        - sdf_at_world(chunks, world_pos - Vec3::X * eps);
+    let dy = sdf_at_world(chunks, world_pos + Vec3::Y * eps)
+        - sdf_at_world(chunks, world_pos - Vec3::Y * eps);
+    let dz = sdf_at_world(chunks, world_pos + Vec3::Z * eps)
+        - sdf_at_world(chunks, world_pos - Vec3::Z * eps);
+
+    let g = Vec3::new(dx, dy, dz);
+    let len = g.length();
+    if len > 1e-5 {
+        g / len
+    } else {
+        Vec3::Y
+    }
+}
+
+/// Retrieves the terrain material voxel index at an arbitrary world position.
+pub fn material_at_world(
+    chunks: &std::collections::HashMap<us_core::ChunkPos, TerrainChunk>,
+    world_pos: Vec3,
+) -> u8 {
+    let cell = CellPos::new(
+        libm::floorf(world_pos.x / CELL) as i32,
+        libm::floorf(world_pos.y / CELL) as i32,
+        libm::floorf(world_pos.z / CELL) as i32,
+    );
+    let cpos = cell.to_chunk();
+    if let Some(chunk) = chunks.get(&cpos) {
+        let local_cell = cell.local_in_chunk();
+        chunk.get_material(
+            local_cell.x.clamp(0, 31) as usize,
+            local_cell.y.clamp(0, 31) as usize,
+            local_cell.z.clamp(0, 31) as usize,
+        )
+    } else {
+        0 // Air
+    }
+}
+
+/// Tests whether a vertical capsule collides with the terrain SDF (§7.1).
+/// Returns penetration normal and penetration depth if overlapping solid ground.
+pub fn capsule_overlap(
+    chunks: &std::collections::HashMap<us_core::ChunkPos, TerrainChunk>,
+    base: Vec3,
+    height: f32,
+    radius: f32,
+) -> Option<(Vec3, f32)> {
+    let bottom_center = base + Vec3::Y * radius;
+    let top_center = base + Vec3::Y * (height - radius).max(radius);
+
+    // Test multiple sample points along the capsule spine
+    let sample_count = 5;
+    let mut deepest_penetration = 0.0f32;
+    let mut best_normal = Vec3::Y;
+    let mut collided = false;
+
+    for i in 0..sample_count {
+        let t = i as f32 / (sample_count - 1) as f32;
+        let pt = bottom_center.lerp(top_center, t);
+        let dist = sdf_at_world(chunks, pt);
+
+        let penetration = radius - dist;
+        if penetration > 0.0 {
+            collided = true;
+            if penetration > deepest_penetration {
+                deepest_penetration = penetration;
+                best_normal = gradient_at_world(chunks, pt);
+            }
+        }
+    }
+
+    if collided {
+        Some((best_normal, deepest_penetration))
+    } else {
+        None
+    }
+}

@@ -3,7 +3,10 @@
 
 pub mod surface_nets;
 
-pub use surface_nets::{mesh_terrain, TerrainMeshBuffers, MAT_AIR, MAT_DIRT, MAT_GRASS, MAT_STONE};
+pub use surface_nets::{
+    mesh_terrain, mesh_terrain_with_offset, TerrainMeshBuffers, MAT_AIR, MAT_DIRT, MAT_GRASS,
+    MAT_STONE,
+};
 
 #[cfg(test)]
 mod tests {

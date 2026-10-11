@@ -1,0 +1,17 @@
+MaterialDef(
+    id: "us:dirt",
+    name_key: "material.dirt",
+    hardness: 0.5,
+    min_tool_tier: 0,
+    yield_item: "us:dirt",
+    yield_per_m3: 1.0,
+    textures: (
+        top: "dirt",
+        side: "dirt",
+        bottom: "dirt",
+    ),
+    sound_set: "dirt",
+    priority: 5,
+    emission: None,
+    tags: ["soil", "natural"],
+)

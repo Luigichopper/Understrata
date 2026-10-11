@@ -494,8 +494,8 @@ Reasons: rebuild latency after edits, ghost collisions at chunk seams, cost, and
   2. **Sphere-sweep** the capsule’s lower/upper spheres along the motion using sphere tracing on the SDF (bounded step), plus swept AABB tests vs. block AABBs.
   3. On hit, **slide** along the surface (project velocity on tangent plane via SDF gradient); iterate ≤ 4 times.
   4. **Depenetrate** via gradient push-out (≤ 4 iterations) when overlapping after edits.
-  5. **Ground probe**: downward capsule cast; compute slope from gradient; **step-up** ≤ 0.6 m; **ground snap** ≤ 0.3 m when descending slopes.
-- **Slope rule**: walkable if `normal.y ≥ cos(50°)`; steeper → slide down.
+  5. **Ground probe**: downward capsule cast; compute slope from gradient; **step-up** ≤ 0.6 m; **ground snap** ≤ 0.35 m when descending slopes.
+- **Slope rule**: walkable if `normal.y ≥ cos(65°)`; steeper (very steep hills) → slide down.
 - **Same controller** for mobs (different capsule radii/heights); flyers use a sphere with 3D steering.
 - **Queries** (`us_voxel::query`): `sdf_at`, `gradient_at`, `capsule_overlap`, `sphere_sweep`, `raycast_terrain` (sphere tracing), `raycast_blocks` (DDA), `raycast_all` (merge).
 

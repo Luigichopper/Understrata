@@ -1,0 +1,17 @@
+MaterialDef(
+    id: "us:stone",
+    name_key: "material.stone",
+    hardness: 1.0,
+    min_tool_tier: 0,
+    yield_item: "us:stone",
+    yield_per_m3: 1.0,
+    textures: (
+        top: "stone",
+        side: "stone",
+        bottom: "stone",
+    ),
+    sound_set: "stone",
+    priority: 10,
+    emission: None,
+    tags: ["stone", "natural"],
+)

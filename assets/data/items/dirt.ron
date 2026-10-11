@@ -1,0 +1,9 @@
+ItemDef(
+    id: "us:dirt",
+    name_key: "item.dirt",
+    max_stack: 999,
+    category: "material",
+    tool_tier: None,
+    tool_power: None,
+    tags: ["material", "soil"],
+)

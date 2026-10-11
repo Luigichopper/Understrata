@@ -10,3 +10,6 @@ us_core.workspace = true
 us_voxel.workspace = true
 us_mesh.workspace = true
 us_worldgen.workspace = true
+us_game.workspace = true
+us_net.workspace = true
+us_sim.workspace = true

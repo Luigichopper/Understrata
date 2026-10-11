@@ -8,3 +8,8 @@ license.workspace = true
 us_core.workspace = true
 us_voxel.workspace = true
 us_content.workspace = true
+glam.workspace = true
+serde.workspace = true
+
+[dev-dependencies]
+us_worldgen.workspace = true

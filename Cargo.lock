@@ -5306,6 +5306,8 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "us_core",
+ "us_game",
+ "us_voxel",
 ]
 
 [[package]]
@@ -5334,8 +5336,10 @@ name = "us_game"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "glam",
  "us_content",
  "us_core",
+ "us_net",
  "us_sim",
  "us_voxel",
 ]
@@ -5353,7 +5357,10 @@ dependencies = [
 name = "us_net"
 version = "0.1.0"
 dependencies = [
+ "glam",
+ "ron",
  "serde",
+ "thiserror 2.0.21",
  "us_core",
  "us_voxel",
 ]
@@ -5364,7 +5371,10 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "us_core",
+ "us_game",
  "us_mesh",
+ "us_net",
+ "us_sim",
  "us_voxel",
  "us_worldgen",
 ]
@@ -5373,9 +5383,12 @@ dependencies = [
 name = "us_sim"
 version = "0.1.0"
 dependencies = [
+ "glam",
+ "serde",
  "us_content",
  "us_core",
  "us_voxel",
+ "us_worldgen",
 ]
 
 [[package]]

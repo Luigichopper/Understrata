@@ -26,7 +26,14 @@ pub fn fly_camera_system(
     mouse_button: Option<Res<ButtonInput<MouseButton>>>,
     accumulated_mouse: Option<Res<AccumulatedMouseMotion>>,
     mut query: Query<(&mut Transform, &mut FlyCamera)>,
+    input_state: Option<Res<us_game::PlayerInputState>>,
 ) {
+    if let Some(state) = &input_state {
+        if !state.fly_mode {
+            return;
+        }
+    }
+
     let (Some(keyboard), Some(mouse_button)) = (keyboard, mouse_button) else {
         return;
     };

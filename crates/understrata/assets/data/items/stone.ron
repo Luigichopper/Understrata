@@ -1,0 +1,9 @@
+ItemDef(
+    id: "us:stone",
+    name_key: "item.stone",
+    max_stack: 999,
+    category: "material",
+    tool_tier: None,
+    tool_power: None,
+    tags: ["material", "stone"],
+)

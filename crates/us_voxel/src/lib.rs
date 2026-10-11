@@ -13,7 +13,10 @@ pub use edit::{
 };
 pub use field::{Field, CHUNK_DIM_USIZE, CHUNK_VOLUME};
 pub use padded::{PaddedChunkArray, PADDED_DIM, PADDED_VOLUME};
-pub use query::{is_solid_at, raycast_terrain, sample_gradient, sample_trilinear_sdf, RaycastHit};
+pub use query::{
+    capsule_overlap, gradient_at_world, is_solid_at, material_at_world, raycast_terrain,
+    sample_gradient, sample_trilinear_sdf, sdf_at_world, RaycastHit,
+};
 
 #[cfg(test)]
 mod tests {

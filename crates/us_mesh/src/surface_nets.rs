@@ -34,8 +34,15 @@ impl TerrainMeshBuffers {
         self.positions.is_empty()
     }
 
-    /// Emits a flat-shaded triangle into the buffers.
-    pub fn push_triangle(&mut self, p0: Vec3, p1: Vec3, p2: Vec3, material: u8) {
+    /// Emits a flat-shaded triangle into the buffers with world-space triplanar UVs.
+    pub fn push_triangle(
+        &mut self,
+        p0: Vec3,
+        p1: Vec3,
+        p2: Vec3,
+        material: u8,
+        world_offset: Vec3,
+    ) {
         let edge1 = p1 - p0;
         let edge2 = p2 - p0;
         let cross = edge1.cross(edge2);
@@ -53,12 +60,25 @@ impl TerrainMeshBuffers {
         };
 
         let norm_arr = normal.to_array();
+        let abs_norm = normal.abs();
 
-        // Push 3 unindexed vertices
+        // Push 3 unindexed vertices with triplanar world-space UV projection (§5.5)
         for &p in &[p0, p1, p2] {
+            let wp = p + world_offset;
+            let uv = if abs_norm.y >= abs_norm.x && abs_norm.y >= abs_norm.z {
+                // Top/Bottom faces: project onto XZ plane
+                [wp.x / CELL, wp.z / CELL]
+            } else if abs_norm.x >= abs_norm.z {
+                // Side faces facing X: project onto ZY plane
+                [wp.z / CELL, wp.y / CELL]
+            } else {
+                // Side faces facing Z: project onto XY plane
+                [wp.x / CELL, wp.y / CELL]
+            };
+
             self.positions.push(p.to_array());
             self.normals.push(norm_arr);
-            self.uvs.push([p.x / CELL, p.z / CELL]);
+            self.uvs.push(uv);
             self.materials.push(final_material);
             self.ao.push(1.0);
         }
@@ -76,6 +96,14 @@ const fn cell_index(cx: usize, cy: usize, cz: usize) -> usize {
 
 /// Meshes a 32³ chunk into flat-shaded triangles using naive Surface Nets (§5.2).
 pub fn mesh_terrain(padded: &PaddedChunkArray) -> TerrainMeshBuffers {
+    mesh_terrain_with_offset(padded, Vec3::ZERO)
+}
+
+/// Meshes a 32³ chunk into flat-shaded triangles with world offset for seamless UVs.
+pub fn mesh_terrain_with_offset(
+    padded: &PaddedChunkArray,
+    world_offset: Vec3,
+) -> TerrainMeshBuffers {
     let mut buffers = TerrainMeshBuffers::new();
 
     // 1. Compute isosurface vertices for all cells in padded space (0..33)
@@ -205,11 +233,11 @@ pub fn mesh_terrain(padded: &PaddedChunkArray) -> TerrainMeshBuffers {
                     if let (Some(v0), Some(v1), Some(v2), Some(v3)) = (c0, c1, c2, c3) {
                         let mat = cell_mats[cell_index(px, py, pz)];
                         if s_start <= 0.0 {
-                            buffers.push_triangle(v0, v3, v2, mat);
-                            buffers.push_triangle(v0, v2, v1, mat);
+                            buffers.push_triangle(v0, v3, v2, mat, world_offset);
+                            buffers.push_triangle(v0, v2, v1, mat, world_offset);
                         } else {
-                            buffers.push_triangle(v0, v1, v2, mat);
-                            buffers.push_triangle(v0, v2, v3, mat);
+                            buffers.push_triangle(v0, v1, v2, mat, world_offset);
+                            buffers.push_triangle(v0, v2, v3, mat, world_offset);
                         }
                     }
                 }
@@ -227,11 +255,11 @@ pub fn mesh_terrain(padded: &PaddedChunkArray) -> TerrainMeshBuffers {
                     if let (Some(v0), Some(v1), Some(v2), Some(v3)) = (c0, c1, c2, c3) {
                         let mat = cell_mats[cell_index(px, py, pz)];
                         if s_start <= 0.0 {
-                            buffers.push_triangle(v0, v3, v2, mat);
-                            buffers.push_triangle(v0, v2, v1, mat);
+                            buffers.push_triangle(v0, v3, v2, mat, world_offset);
+                            buffers.push_triangle(v0, v2, v1, mat, world_offset);
                         } else {
-                            buffers.push_triangle(v0, v1, v2, mat);
-                            buffers.push_triangle(v0, v2, v3, mat);
+                            buffers.push_triangle(v0, v1, v2, mat, world_offset);
+                            buffers.push_triangle(v0, v2, v3, mat, world_offset);
                         }
                     }
                 }
@@ -249,11 +277,11 @@ pub fn mesh_terrain(padded: &PaddedChunkArray) -> TerrainMeshBuffers {
                     if let (Some(v0), Some(v1), Some(v2), Some(v3)) = (c0, c1, c2, c3) {
                         let mat = cell_mats[cell_index(px, py, pz)];
                         if s_start <= 0.0 {
-                            buffers.push_triangle(v0, v3, v2, mat);
-                            buffers.push_triangle(v0, v2, v1, mat);
+                            buffers.push_triangle(v0, v3, v2, mat, world_offset);
+                            buffers.push_triangle(v0, v2, v1, mat, world_offset);
                         } else {
-                            buffers.push_triangle(v0, v1, v2, mat);
-                            buffers.push_triangle(v0, v2, v3, mat);
+                            buffers.push_triangle(v0, v1, v2, mat, world_offset);
+                            buffers.push_triangle(v0, v2, v3, mat, world_offset);
                         }
                     }
                 }

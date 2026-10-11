@@ -2,14 +2,15 @@ use bevy::prelude::*;
 use bevy::text::FontSize;
 use std::collections::HashMap;
 use us_core::ChunkPos;
-use us_mesh::{mesh_terrain, MAT_AIR, MAT_DIRT, MAT_GRASS, MAT_STONE};
+use us_mesh::{mesh_terrain_with_offset, MAT_AIR, MAT_DIRT, MAT_GRASS, MAT_STONE};
 use us_voxel::{
     apply_edit_op, quantize_sdf, raycast_terrain, BrushMode, BrushShape, EditOp, LoggedOp,
     PaddedChunkArray, TerrainChunk,
 };
 
-use crate::fly_cam::FlyCamera;
-use crate::mesh_conv::terrain_buffers_to_bevy_mesh;
+use us_game::{PlayerInputState, PlayerPhysicalState};
+
+use crate::mesh_conv::{split_terrain_buffers_by_material, terrain_buffers_to_bevy_mesh};
 
 /// Resource storing all active terrain chunks in memory (§5.1).
 #[derive(Resource, Default)]
@@ -17,11 +18,23 @@ pub struct WorldChunks {
     pub chunks: HashMap<ChunkPos, TerrainChunk>,
 }
 
-/// Resource mapping chunk positions to their spawned Bevy entities and mesh handles.
+/// Resource mapping chunk positions to their spawned Bevy entities and mesh handles per material.
 #[derive(Resource, Default)]
 pub struct ChunkRenderEntities {
-    pub entities: HashMap<ChunkPos, (Entity, Handle<Mesh>)>,
-    pub terrain_material: Handle<StandardMaterial>,
+    pub entities: HashMap<ChunkPos, HashMap<u8, (Entity, Handle<Mesh>)>>,
+    pub dirt_material: Handle<StandardMaterial>,
+    pub stone_material: Handle<StandardMaterial>,
+    pub grass_material: Handle<StandardMaterial>,
+}
+
+impl ChunkRenderEntities {
+    pub fn material_for(&self, mat_id: u8) -> Handle<StandardMaterial> {
+        match mat_id {
+            MAT_STONE => self.stone_material.clone(),
+            MAT_GRASS => self.grass_material.clone(),
+            _ => self.dirt_material.clone(),
+        }
+    }
 }
 
 /// Resource controlling terrain interaction parameters (TER-004, TER-005).
@@ -150,7 +163,8 @@ pub fn terrain_interaction_system(
     mut debug_overlay: ResMut<DebugOverlayState>,
     meshes: Option<ResMut<Assets<Mesh>>>,
     materials: Option<ResMut<Assets<StandardMaterial>>>,
-    cam_query: Query<(&Transform, &FlyCamera)>,
+    cam_query: Query<&Transform, With<Camera3d>>,
+    mut server: Option<ResMut<us_game::LocalServer>>,
 ) {
     let (Some(keyboard), Some(mouse_button), Some(mut meshes), Some(mut materials)) =
         (keyboard, mouse_button, meshes, materials)
@@ -158,7 +172,7 @@ pub fn terrain_interaction_system(
         return;
     };
 
-    let Ok((cam_trans, _)) = cam_query.single() else {
+    let Ok(cam_trans) = cam_query.single() else {
         return;
     };
 
@@ -245,8 +259,16 @@ pub fn terrain_interaction_system(
         seq,
         tick: (now * 60.0) as u64,
         actor: 0,
-        op,
+        op: op.clone(),
     });
+
+    // Dispatch intent to authoritative server (NET-001)
+    if let Some(srv) = server.as_mut() {
+        srv.send_from_client(
+            us_net::ClientMessage::EditIntent(us_net::EditIntent { sequence: seq, op }),
+            time.elapsed_secs_f64(),
+        );
+    }
 
     // 6. Yield Accumulation & Drops (TER-008)
     for (&mat, &vol) in &applied.removed_volume_per_mat {
@@ -311,26 +333,47 @@ pub fn terrain_interaction_system(
             }
         });
 
-        let mesh_data = mesh_terrain(&padded);
-        let new_bevy_mesh = terrain_buffers_to_bevy_mesh(&mesh_data);
+        let min_pos = cpos.min_world().0;
+        let mesh_data = mesh_terrain_with_offset(&padded, min_pos);
+        let sub_buffers = split_terrain_buffers_by_material(&mesh_data);
 
-        if let Some((_, handle)) = render_entities.entities.get(&cpos) {
-            // Update existing mesh asset in-place
-            if let Some(mut mesh_asset) = meshes.get_mut(handle) {
-                *mesh_asset = new_bevy_mesh;
+        let mut existing_map = render_entities.entities.remove(&cpos).unwrap_or_default();
+        let mut new_map = HashMap::new();
+
+        for (mat_id, buf) in sub_buffers {
+            if buf.is_empty() {
+                continue;
             }
-        } else if !mesh_data.is_empty() {
-            // Newly meshed chunk that previously had no triangles
-            let handle = meshes.add(new_bevy_mesh);
-            let min_pos = cpos.min_world().0;
-            let entity = commands
-                .spawn((
-                    Mesh3d(handle.clone()),
-                    MeshMaterial3d(render_entities.terrain_material.clone()),
-                    Transform::from_translation(min_pos),
-                ))
-                .id();
-            render_entities.entities.insert(cpos, (entity, handle));
+            let new_bevy_mesh = terrain_buffers_to_bevy_mesh(&buf);
+
+            if let Some((entity, handle)) = existing_map.remove(&mat_id) {
+                // Update existing mesh asset in-place (zero-flicker)
+                if let Some(mut mesh_asset) = meshes.get_mut(&handle) {
+                    *mesh_asset = new_bevy_mesh;
+                }
+                new_map.insert(mat_id, (entity, handle));
+            } else {
+                // Newly meshed material sub-entity in this chunk
+                let handle = meshes.add(new_bevy_mesh);
+                let mat_handle = render_entities.material_for(mat_id);
+                let entity = commands
+                    .spawn((
+                        Mesh3d(handle.clone()),
+                        MeshMaterial3d(mat_handle),
+                        Transform::from_translation(min_pos),
+                    ))
+                    .id();
+                new_map.insert(mat_id, (entity, handle));
+            }
+        }
+
+        // Despawn sub-entities for materials that no longer exist in this chunk
+        for (_mat_id, (entity, _)) in existing_map {
+            commands.entity(entity).despawn();
+        }
+
+        if !new_map.is_empty() {
+            render_entities.entities.insert(cpos, new_map);
         }
     }
 }
@@ -364,17 +407,23 @@ pub fn hud_update_system(
     edit_state: Res<TerrainEditState>,
     yield_accum: Res<YieldAccumulator>,
     debug_overlay: Res<DebugOverlayState>,
-    cam_query: Query<&Transform, With<FlyCamera>>,
+    cam_query: Query<(&Transform, Option<&crate::viewmodel::FirstPersonCamera>), With<Camera3d>>,
+    input_state: Option<Res<PlayerInputState>>,
+    physical_state: Option<Res<PlayerPhysicalState>>,
     mut text_query: Query<&mut Text, With<HudText>>,
 ) {
     let Ok(mut text) = text_query.single_mut() else {
         return;
     };
 
-    let cam_pos = if let Ok(cam_t) = cam_query.single() {
-        cam_t.translation
+    let (cam_pos, cam_perspective_str) = if let Ok((cam_t, maybe_fpc)) = cam_query.single() {
+        let p_str = match maybe_fpc.map(|c| c.perspective) {
+            Some(crate::viewmodel::CameraPerspective::ThirdPerson) => "3rd Person",
+            _ => "1st Person",
+        };
+        (cam_t.translation, p_str)
     } else {
-        Vec3::ZERO
+        (Vec3::ZERO, "1st Person")
     };
 
     let dirt_yield = yield_accum.total_drops.get(&MAT_DIRT).copied().unwrap_or(0);
@@ -384,8 +433,15 @@ pub fn hud_update_system(
         .copied()
         .unwrap_or(0);
 
+    let mode_str = if input_state.as_ref().is_some_and(|s| s.fly_mode) {
+        "FLY (Creative)"
+    } else {
+        "WALK (Physics)"
+    };
+
     let mut content = format!(
-        "UNDERSTRATA — M2 (Dig & Fill)\n\
+        "UNDERSTRATA — M3 (Walk the World) [{mode_str}]\n\
+         [WASD] Walk  [Shift] Sprint  [Ctrl] Crouch  [Space] Jump  [P] Fly Toggle  [V] Camera: {cam_perspective_str}\n\
          [LMB] Dig  [F] Fill  [1/2/3] Radius: {:.1}m\n\
          Yield: Dirt: {} | Stone: {}\n",
         edit_state.brush_radius, dirt_yield, stone_yield
@@ -405,14 +461,33 @@ pub fn hud_update_system(
             _ => "None".to_string(),
         };
 
+        let ground_str = if physical_state.as_ref().is_some_and(|p| p.on_ground) {
+            "Yes"
+        } else {
+            "Air"
+        };
+        let crouch_str = if physical_state.as_ref().is_some_and(|p| p.is_crouching) {
+            "Yes"
+        } else {
+            "No"
+        };
+        let speed = physical_state
+            .as_ref()
+            .map(|p| p.velocity.length())
+            .unwrap_or(0.0);
+
         content += &format!(
             "\n--- F3 DEBUG ---\n\
              Cam Pos: ({:.1}, {:.1}, {:.1})\n\
+             Grounded: {} | Crouching: {} | Speed: {:.1} m/s\n\
              Target: {}\n\
              Ops Applied: {}\n",
             cam_pos.x,
             cam_pos.y,
             cam_pos.z,
+            ground_str,
+            crouch_str,
+            speed,
             hit_str,
             edit_state.op_log.len()
         );
